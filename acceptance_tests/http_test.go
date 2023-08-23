@@ -14,7 +14,7 @@ var _ = Describe("http", func() {
 	var (
 		server *httptest.Server
 		conf   *TestConfig
-		tester *PandoraTester
+		tester *SpecterTester
 	)
 	ServerEndpoint := func() string {
 		Expect(server).NotTo(BeNil())
@@ -83,7 +83,7 @@ var _ = Describe("http", func() {
 		itOk := func() {
 			It("ok", func() {
 				exitCode := tester.ExitCode()
-				Expect(exitCode).To(BeZero(), "Pandora finish execution with non zero code")
+				Expect(exitCode).To(BeZero(), "Specter finish execution with non zero code")
 				Expect(requetsCount.Load()).To(BeEquivalentTo(Requests))
 				// TODO: parse and check phout output
 			})
@@ -121,7 +121,7 @@ var _ = Describe("http", func() {
 				})
 				It("ok", func() {
 					exitCode := tester.ExitCode()
-					Expect(exitCode).NotTo(BeZero(), "Pandora should fail")
+					Expect(exitCode).NotTo(BeZero(), "Specter should fail")
 				})
 
 			})

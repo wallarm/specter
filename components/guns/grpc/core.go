@@ -224,7 +224,7 @@ func makeGRPCConnect(target string, isTLS bool, dialOptions grpcDialOptions) (co
 		timeout = dialOptions.Timeout
 	}
 	opts = append(opts, grpc.WithTimeout(timeout))
-	opts = append(opts, grpc.WithUserAgent("load test, pandora universal grpc shooter"))
+	opts = append(opts, grpc.WithUserAgent("load test, specter universal grpc shooter"))
 
 	if dialOptions.Authority != "" {
 		opts = append(opts, grpc.WithAuthority(dialOptions.Authority))

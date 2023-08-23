@@ -1,11 +1,3 @@
-// package core defines pandora engine extension points.
-// Core interfaces implementations MAY be used for custom engine creation and using as a library,
-// or MAY be registered in pandora plugin system (look at core/plugin package), for creating engine
-// from abstract config.
-//
-// The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT",
-// "RECOMMENDED",  "MAY", and "OPTIONAL" in that package doc are to be interpreted as described in
-// https://www.ietf.org/rfc/rfc2119.txt
 package core
 
 import (

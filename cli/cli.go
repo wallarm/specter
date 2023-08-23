@@ -30,7 +30,7 @@ const Version = "0.5.8"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 
-var configSearchDirs = []string{"./", "./config", "/etc/pandora", "./../suite/mirroring"}
+var configSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring"}
 
 type cliConfig struct {
 	Engine     engine.Config    `config:",squash"`
@@ -84,7 +84,7 @@ func defaultConfig() *cliConfig {
 // TODO: on special command (help or smth else) print list of available plugins
 
 func Run() {
-	fs := flag.NewFlagSet("Pandora", flag.ExitOnError)
+	fs := flag.NewFlagSet("Specter", flag.ExitOnError)
 
 	var (
 		example bool
@@ -93,7 +93,7 @@ func Run() {
 	)
 
 	fs.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
-	fs.BoolVar(&version, "version", false, "print pandora core version")
+	fs.BoolVar(&version, "version", false, "print specter core version")
 	fs.BoolVar(&expvar, "expvar", false, "enable expvar service (DEPRECATED, use monitoring config section instead)")
 
 	if expvar {
@@ -106,7 +106,7 @@ func Run() {
 	}
 
 	if version {
-		fmt.Fprintf(os.Stderr, "Pandora core/%s\n", Version)
+		fmt.Fprintf(os.Stderr, "Specter core/%s\n", Version)
 		return
 	}
 
@@ -124,21 +124,21 @@ func ReadConfigAndRunEngine() {
 	m := newEngineMetrics()
 	startReport(m)
 
-	pandora := engine.New(log, m, conf.Engine)
+	specter := engine.New(log, m, conf.Engine)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	errs := make(chan error)
-	go runEngine(ctx, pandora, errs)
+	go runEngine(ctx, specter, errs)
 
 	// waiting for signal or error message from engine
-	awaitPandoraTermination(pandora, cancel, errs, log)
+	termination(specter, cancel, errs, log)
 	log.Info("Engine run successfully finished")
 }
 
-// helper function that awaits pandora run
-func awaitPandoraTermination(pandora *engine.Engine, gracefulShutdown func(), errs chan error, log *zap.Logger) {
+// helper function that awaits specter run
+func termination(specter *engine.Engine, gracefulShutdown func(), errs chan error, log *zap.Logger) {
 	sigs := make(chan os.Signal, 2)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -170,7 +170,7 @@ func awaitPandoraTermination(pandora *engine.Engine, gracefulShutdown func(), er
 	case err := <-errs:
 		switch err {
 		case nil:
-			log.Info("Pandora engine successfully finished it's work")
+			log.Info("Specter engine successfully finished it's work")
 		case err:
 			const awaitTimeout = 3 * time.Second
 			log.Error("Engine run failed. Awaiting started tasks.", zap.Error(err), zap.Duration("timeout", awaitTimeout))
@@ -178,8 +178,8 @@ func awaitPandoraTermination(pandora *engine.Engine, gracefulShutdown func(), er
 			time.AfterFunc(awaitTimeout, func() {
 				log.Fatal("Engine tasks timeout exceeded.")
 			})
-			pandora.Wait()
-			log.Fatal("Engine run failed. Pandora graceful shutdown successfully finished")
+			specter.Wait()
+			log.Fatal("Engine run failed. Specter graceful shutdown successfully finished")
 		}
 	}
 }

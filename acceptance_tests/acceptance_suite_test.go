@@ -18,7 +18,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var pandoraBin string
+var specterBin string
 
 func TestAcceptanceTests(t *testing.T) {
 	ginkgoutil.SetupSuite()
@@ -32,7 +32,7 @@ func TestAcceptanceTests(t *testing.T) {
 		args = append(args, "-tags", "debug")
 	}
 	var err error
-	pandoraBin, err = gexec.Build("github.com/wallarm/specter", args...)
+	specterBin, err = gexec.Build("github.com/wallarm/specter", args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,9 +41,8 @@ func TestAcceptanceTests(t *testing.T) {
 }
 
 type TestConfig struct {
-	// Default way to pass config to pandora.
-	PandoraConfig
-	// RawConfig overrides Pandora.
+	SpecterConfig
+	// RawConfig overrides Specter.
 	RawConfig  string
 	ConfigName string            // Without extension. "load" by default.
 	UseJSON    bool              // Using YAML by default.
@@ -53,14 +52,14 @@ type TestConfig struct {
 
 func NewTestConfig() *TestConfig {
 	return &TestConfig{
-		PandoraConfig: PandoraConfig{
+		SpecterConfig: SpecterConfig{
 			Pool: []*InstancePoolConfig{NewInstansePoolConfig()},
 		},
 		Files: map[string]string{},
 	}
 }
 
-type PandoraConfig struct {
+type SpecterConfig struct {
 	Pool             []*InstancePoolConfig `yaml:"pools" json:"pools"`
 	LogConfig        `yaml:"log,omitempty" json:"log,omitempty"`
 	MonitoringConfig `yaml:"monitoring,omitempty" json:"monitoring,omitempty"`
@@ -92,7 +91,7 @@ type memprofileConfig struct {
 	File    string `yaml:"file" json:"file"`
 }
 
-func (pc *PandoraConfig) Append(ipc *InstancePoolConfig) {
+func (pc *SpecterConfig) Append(ipc *InstancePoolConfig) {
 	pc.Pool = append(pc.Pool, ipc)
 }
 
@@ -117,17 +116,17 @@ type InstancePoolConfig struct {
 	StartupSchedule interface{}            `yaml:"startup" json:"startup"`
 }
 
-type PandoraTester struct {
+type SpecterTester struct {
 	*gexec.Session
-	// TestDir is working dir of launched pandora.
+	// TestDir is working dir of launched specter.
 	// It contains config and ammo files, and will be removed after test execution.
 	// All files created during a test should created in this dir.
 	TestDir string
 	Config  *TestConfig
 }
 
-func NewTester(conf *TestConfig) *PandoraTester {
-	testDir, err := os.MkdirTemp("", "pandora_acceptance_")
+func NewTester(conf *TestConfig) *SpecterTester {
+	testDir, err := os.MkdirTemp("", "specter_acceptance_")
 	Expect(err).ToNot(HaveOccurred())
 	if conf.ConfigName == "" {
 		conf.ConfigName = "load"
@@ -142,9 +141,9 @@ func NewTester(conf *TestConfig) *PandoraTester {
 		confData = []byte(conf.RawConfig)
 	} else {
 		if conf.UseJSON {
-			confData, err = json.Marshal(conf.PandoraConfig)
+			confData, err = json.Marshal(conf.SpecterConfig)
 		} else {
-			confData, err = yaml.Marshal(conf.PandoraConfig)
+			confData, err = yaml.Marshal(conf.SpecterConfig)
 		}
 		Expect(err).ToNot(HaveOccurred())
 	}
@@ -158,12 +157,12 @@ func NewTester(conf *TestConfig) *PandoraTester {
 		Expect(err).ToNot(HaveOccurred())
 	}
 
-	command := exec.Command(pandoraBin, conf.CmdArgs...)
+	command := exec.Command(specterBin, conf.CmdArgs...)
 	command.Dir = testDir
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).ToNot(HaveOccurred())
 
-	tt := &PandoraTester{
+	tt := &SpecterTester{
 		Session: session,
 		TestDir: testDir,
 		Config:  conf,
@@ -171,15 +170,15 @@ func NewTester(conf *TestConfig) *PandoraTester {
 	return tt
 }
 
-func (pt *PandoraTester) ShouldSay(pattern string) {
+func (pt *SpecterTester) ShouldSay(pattern string) {
 	EventuallyWithOffset(1, pt.Out, 3*time.Second).Should(gbytes.Say(pattern))
 }
 
-func (pt *PandoraTester) ExitCode() int {
+func (pt *SpecterTester) ExitCode() int {
 	return pt.Session.Wait(5).ExitCode()
 }
 
-func (pt *PandoraTester) Close() {
+func (pt *SpecterTester) Close() {
 	pt.Terminate()
 	_ = os.RemoveAll(pt.TestDir)
 }
