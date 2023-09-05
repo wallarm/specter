@@ -45,3 +45,7 @@ func NewCounter(name string) *Counter {
 	counters[name] = v
 	return v
 }
+
+func DropCounters() {
+	counters = make(map[string]*Counter)
+}

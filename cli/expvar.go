@@ -8,6 +8,7 @@ import (
 )
 
 func newEngineMetrics() engine.Metrics {
+	monitoring.DropCounters()
 	return engine.Metrics{
 		Request:        monitoring.NewCounter("engine_Requests"),
 		Response:       monitoring.NewCounter("engine_Responses"),
@@ -21,6 +22,7 @@ func startReport(m engine.Metrics) {
 	evResPS := monitoring.NewCounter("engine_ResPS")
 	evActiveUsers := monitoring.NewCounter("engine_ActiveUsers")
 	evActiveRequests := monitoring.NewCounter("engine_ActiveRequests")
+
 	requests := m.Request.Get()
 	responses := m.Response.Get()
 	go func() {

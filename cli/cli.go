@@ -115,16 +115,22 @@ func Run() {
 
 func ReadConfigAndRunEngine() {
 	conf := readConfig(flag.Args())
-	log := newLogger(conf.Log)
+	RunEngine(conf)
+}
+
+func RunEngine(cfg *cliConfig) {
+
+	log := newLogger(cfg.Log)
 	zap.ReplaceGlobals(log)
 	zap.RedirectStdLog(log)
 
-	closeMonitoring := startMonitoring(conf.Monitoring)
+	closeMonitoring := startMonitoring(cfg.Monitoring)
 	defer closeMonitoring()
+
 	m := newEngineMetrics()
 	startReport(m)
 
-	specter := engine.New(log, m, conf.Engine)
+	specter := engine.New(log, m, cfg.Engine)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -241,12 +247,12 @@ func readConfig(args []string) *cliConfig {
 		}
 	}
 
-	conf := defaultConfig()
-	err = config.DecodeAndValidate(v.AllSettings(), conf)
+	cfg := defaultConfig()
+	err = config.DecodeAndValidate(v.AllSettings(), cfg)
 	if err != nil {
 		log.Fatal("Config decode failed", zap.Error(err))
 	}
-	return conf
+	return cfg
 }
 
 func newViper() *viper.Viper {

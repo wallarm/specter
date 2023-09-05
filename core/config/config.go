@@ -8,20 +8,21 @@ import (
 const TagName = "config"
 
 // Decode Decodes conf to result. Doesn't zero fields.
-func Decode(conf interface{}, result interface{}) error {
-	decoder, err := mapstructure.NewDecoder(newDecoderConfig(result))
+func Decode(cfgMap interface{}, cfg interface{}) error {
+	decoder, err := mapstructure.NewDecoder(newDecoderConfig(cfg))
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return errors.WithStack(decoder.Decode(conf))
+	err = decoder.Decode(cfgMap)
+	return errors.WithStack(err)
 }
 
-func DecodeAndValidate(conf interface{}, result interface{}) error {
-	err := Decode(conf, result)
+func DecodeAndValidate(cfgMap interface{}, cfg interface{}) error {
+	err := Decode(cfgMap, cfg)
 	if err != nil {
 		return err
 	}
-	return Validate(result)
+	return Validate(cfg)
 }
 
 // Map maps with overwrite fields from src to dst.
@@ -68,7 +69,7 @@ func Map(dst, src interface{}) {
 	}
 }
 
-func newDecoderConfig(result interface{}) *mapstructure.DecoderConfig {
+func newDecoderConfig(cfg interface{}) *mapstructure.DecoderConfig {
 	compileHooks()
 	return &mapstructure.DecoderConfig{
 		DecodeHook:       compiledHook,
@@ -76,7 +77,7 @@ func newDecoderConfig(result interface{}) *mapstructure.DecoderConfig {
 		ZeroFields:       false,
 		WeaklyTypedInput: false,
 		TagName:          TagName,
-		Result:           result,
+		Result:           cfg,
 	}
 }
 
