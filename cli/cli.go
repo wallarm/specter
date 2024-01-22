@@ -5,8 +5,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/wallarm/specter/helpers"
 	"io"
 	"log"
 	"net/http"
@@ -18,6 +16,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/wallarm/specter/helpers"
 
 	"github.com/spf13/viper"
 
