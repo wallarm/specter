@@ -1,7 +1,5 @@
 .idea
 /bin/
-/.workload_ns
-/.wlrm/k8s/wallarm-ingress-values.yaml
 /.env
 ammo.json
 load.yaml
