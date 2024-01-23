@@ -48,8 +48,8 @@ deps:
 #====================  DOCKER  ====================
 
 IMAGE_NAME ?= denisqsound/specter
-PLATFORMS := linux/arm64 linux/amd64 # darwin/amd64 darwin/arm64
-IMAGE_FILE := specter# pipeline
+PLATFORMS := linux/arm64 linux/amd64# darwin/amd64 darwin/arm64
+IMAGE_FILE := pipeline#specter#
 
 define BUILD_template
 build-$(1):
@@ -90,7 +90,7 @@ dc-publish:
 	$(MAKE) build
 	$(MAKE) dc-build
 	$(MAKE) dc-push
-	$(MAKE) dc-manifest
+	#$(MAKE) dc-manifest
 
 
 dc-run:

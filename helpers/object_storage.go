@@ -75,27 +75,12 @@ func NewClient(endpoint, accessKeyID, secretAccessKey string, useSSL bool) (*Cli
 		return nil, err
 	}
 
-	//buckets, err := client.ListBuckets(context.Background())
-	//if err != nil {
-	//	logrus.Errorf("Error list buckets: %v", err)
-	//	return nil, err
-	//}
-	//
-	//logrus.Info("======= Buckets name =======")
-	//
-	//for _, bucket := range buckets {
-	//	if strings.HasPrefix(bucket.Name, "wallarm-perf") {
-	//		logrus.Infof("Bucket: %v", bucket.Name)
-	//	}
-	//}
-
 	return &Client{client}, nil
 }
 
 type Minio interface {
 	Upload(ctx context.Context, bucketName, objectName string, fileContent io.Reader, fileSize int64) error
 	GetLink(bucketName, objectName string) (string, error)
-	//IsExist(bucketName, objectName string) bool
 	UpdateFile(ctx context.Context, bucketName, objectName string) error
 }
 
@@ -103,6 +88,9 @@ func (client *Client) Upload(ctx context.Context, bucketName, objectName string,
 
 	ext := filepath.Ext(objectName)
 	contentType := mime.TypeByExtension(ext)
+
+	fmt.Printf("Uploading %s to bucket %s with filename %s\n", objectName, bucketName, objectName)
+	fmt.Printf("Content-Type: %s\n", contentType)
 
 	_, err := client.Minio.PutObject(
 		ctx, bucketName, objectName, fileContent, fileSize, minio.PutObjectOptions{
@@ -118,11 +106,6 @@ func (client *Client) Upload(ctx context.Context, bucketName, objectName string,
 
 func (client *Client) GetLink(ctx context.Context, bucketName, objectName string) (string, error) {
 	reqParams := make(url.Values)
-
-	// ToDo заменить your-filename.txt на имя файла
-	//reqParams.Set(constant.ResponseContentDisposition, "inline; filename=\"your-filename.txt\"")
-	//reqParams.Set(constant.ResponseContentType, ContentType)
-
 	object, err := client.Minio.PresignedGetObject(
 		ctx, bucketName, objectName, time.Second*7*60*60, reqParams)
 	if err != nil {
@@ -171,32 +154,19 @@ func UploadFileToS3(ctx context.Context, client *Client, fileName, bucket string
 	var newFileName string
 	switch {
 	case strings.Contains(fileName, "load.yaml"):
-		newFileName = fmt.Sprintf("%s/load.yaml", pipelineID)
+		newFileName = fmt.Sprintf("reports/%s/load.yaml", pipelineID)
 	case strings.Contains(fileName, "ammo.json"):
-		newFileName = fmt.Sprintf("%s/ammo.json", pipelineID)
+		newFileName = fmt.Sprintf("reports/%s/ammo.json", pipelineID)
 	case regexp.MustCompile(`(^|/)http_phout\.log$`).MatchString(fileName):
-		newFileName = fmt.Sprintf("%s/http_phout.log", pipelineID)
+		newFileName = fmt.Sprintf("reports/%s/http_phout.log", pipelineID)
 	case regexp.MustCompile(`(^|/)phout\.log$`).MatchString(fileName):
-		newFileName = fmt.Sprintf("%s/phout.log", pipelineID)
+		newFileName = fmt.Sprintf("reports/%s/phout.log", pipelineID)
 	case strings.Contains(fileName, "answ.log"):
-		newFileName = fmt.Sprintf("%s/answ.log", pipelineID)
+		newFileName = fmt.Sprintf("reports/%s/answ.log", pipelineID)
 	default:
-		newFileName = fmt.Sprintf("%s/%s", pipelineID, fileName)
+		newFileName = fmt.Sprintf("reports/%s/%s", pipelineID, fileName)
 	}
 
-	fmt.Printf("Uploading %s to %s/%s\n", fileName, bucket, newFileName)
-
+	fmt.Printf("Uploading %s to bucket %s with filename %s\n", fileName, bucket, newFileName)
 	return client.Upload(ctx, bucket, newFileName, reader, fileSize)
-}
-
-func PrintFileLinks(bucket string) {
-	_ = godotenv.Load()
-	pipelineID := os.Getenv("CI_PIPELINE_ID")
-
-	linkLoadYaml := fmt.Sprintf("https://storage.googleapis.com/%s/%s/%s", bucket, pipelineID, "load.yaml")
-	linkAmmoJson := fmt.Sprintf("https://storage.googleapis.com/%s/%s/%s", bucket, pipelineID, "ammo.json")
-
-	logrus.Info("======= Upload success =======")
-	logrus.Infof(" export S3_LOAD_YAML_URL='%s'", linkLoadYaml)
-	logrus.Infof(" export S3_AMMO_JSON='%s'", linkAmmoJson)
 }

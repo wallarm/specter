@@ -29,7 +29,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const Version = "0.0.1"
+const Version = "0.0.6"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 const mainBucket = "wallarm-perf-pandora"
@@ -116,8 +116,8 @@ func Run() {
 	if artefacts {
 		s3Client := helpers.Initialize()
 
-		fileNames := []string{"http_phout.log", "phout.log", "answ.log"}
-		if err := uploadFiles(s3Client, mainBucket, fileNames...); err != nil {
+		fileNames := []string{"http_phout.log", "phout.log", "answ.log", "load.yaml", "ammo.json"}
+		if err := uploadReportsFiles(s3Client, mainBucket, fileNames...); err != nil {
 			logrus.Fatalf("%v", err)
 		}
 
@@ -128,7 +128,7 @@ func Run() {
 		s3Client := helpers.Initialize()
 
 		fileNames := []string{"load.yaml", "ammo.json"}
-		if err := uploadFiles(s3Client, mainBucket, fileNames...); err != nil {
+		if err := uploadReportsFiles(s3Client, mainBucket, fileNames...); err != nil {
 			logrus.Fatalf("%v", err)
 		}
 
@@ -152,7 +152,7 @@ func Run() {
 	}
 
 	if version {
-		fmt.Fprintf(os.Stderr, "Specter core/%s\n", Version)
+		logrus.Infof("Specter core/%s", Version)
 		return
 	}
 
@@ -386,9 +386,8 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 	return
 }
 
-func uploadFiles(s3Client *helpers.Client, bucket string, fileNames ...string) error {
+func uploadReportsFiles(s3Client *helpers.Client, bucket string, fileNames ...string) error {
 	s3Ctx := context.Background()
-
 	for _, name := range fileNames {
 		artefactFile, err := helpers.FindFile(name)
 		if err != nil {
