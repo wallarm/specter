@@ -1,2 +1,5 @@
 .idea
-
+/bin/
+/.env
+ammo.json
+load.yaml

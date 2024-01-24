@@ -5,7 +5,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"github.com/wallarm/specter/helpers"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,9 +29,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const Version = "0.5.8"
+const Version = "0.0.6"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
+const mainBucket = "wallarm-perf-pandora"
 
 var configSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring"}
 
@@ -50,11 +54,11 @@ func newLogger(conf logConfig) *zap.Logger {
 	zapConf := zap.NewDevelopmentConfig()
 	zapConf.OutputPaths = []string{conf.File}
 	zapConf.Level.SetLevel(conf.Level)
-	log, err := zapConf.Build(zap.AddCaller())
+	logger, err := zapConf.Build(zap.AddCaller())
 	if err != nil {
 		zap.L().Fatal("Logger build failed", zap.Error(err))
 	}
-	return log
+	return logger
 }
 
 func defaultConfig() *cliConfig {
@@ -84,20 +88,62 @@ func defaultConfig() *cliConfig {
 // TODO: on special command (help or smth else) print list of available plugins
 
 func Run() {
-	fs := flag.NewFlagSet("Specter", flag.ExitOnError)
+	flag.Usage = func() {
+		_, err := fmt.Fprintf(
+			os.Stderr,
+			"Usage of Specter: specter [<config_filename>]\n"+"<config_filename> is './%s.(yaml|json|...)' by default\n",
+			defaultConfigFile)
+		if err != nil {
+			log.Fatalf("Error: %v", err)
+		}
+		flag.PrintDefaults()
+	}
 
-	var (
-		example bool
-		expvar  bool
-		version bool
-	)
+	var example, version, download, upload, update, artefacts bool
+	var updateTarget string
 
-	fs.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
-	fs.BoolVar(&version, "version", false, "print specter core version")
-	fs.BoolVar(&expvar, "expvar", false, "enable expvar service (DEPRECATED, use monitoring config section instead)")
+	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
+	flag.BoolVar(&version, "version", false, "print specter core version")
+	flag.BoolVar(&upload, "upload", false, "upload to s3 ammo and config for specter")
+	flag.BoolVar(&artefacts, "artefacts", false, "upload to s3 artefacts for specter")
+	flag.BoolVar(&download, "download", false, "download from s3 ammo and config for specter")
+	flag.BoolVar(&update, "update", false, "update aim for specter")
 
-	if expvar {
-		fmt.Fprintf(os.Stderr, "-expvar flag is DEPRECATED. Use monitoring config section instead\n")
+	flag.StringVar(&updateTarget, "target", "", "specify the target for update")
+
+	flag.Parse()
+
+	if artefacts {
+		s3Client := helpers.Initialize()
+
+		fileNames := []string{"http_phout.log", "phout.log", "answ.log", "load.yaml", "ammo.json"}
+		if err := uploadReportsFiles(s3Client, mainBucket, fileNames...); err != nil {
+			logrus.Fatalf("%v", err)
+		}
+
+		return
+	}
+
+	if upload {
+		s3Client := helpers.Initialize()
+
+		fileNames := []string{"load.yaml", "ammo.json"}
+		if err := uploadReportsFiles(s3Client, mainBucket, fileNames...); err != nil {
+			logrus.Fatalf("%v", err)
+		}
+
+		return
+	}
+
+	if update {
+		if updateTarget == "" {
+			logrus.Fatalf("No update target specified")
+		}
+		if err := helpers.UpdateFiles(updateTarget); err != nil {
+			logrus.Fatalf("Error updating files: %s", err)
+		}
+		return
+
 	}
 
 	if example {
@@ -106,7 +152,7 @@ func Run() {
 	}
 
 	if version {
-		fmt.Fprintf(os.Stderr, "Specter core/%s\n", Version)
+		logrus.Infof("Specter core/%s", Version)
 		return
 	}
 
@@ -120,9 +166,9 @@ func ReadConfigAndRunEngine() {
 
 func RunEngine(cfg *cliConfig) {
 
-	log := newLogger(cfg.Log)
-	zap.ReplaceGlobals(log)
-	zap.RedirectStdLog(log)
+	logger := newLogger(cfg.Log)
+	zap.ReplaceGlobals(logger)
+	zap.RedirectStdLog(logger)
 
 	closeMonitoring := startMonitoring(cfg.Monitoring)
 	defer closeMonitoring()
@@ -130,7 +176,7 @@ func RunEngine(cfg *cliConfig) {
 	m := newEngineMetrics()
 	startReport(m)
 
-	specter := engine.New(log, m, cfg.Engine)
+	specter := engine.New(logger, m, cfg.Engine)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -139,8 +185,8 @@ func RunEngine(cfg *cliConfig) {
 	go runEngine(ctx, specter, errs)
 
 	// waiting for signal or error message from engine
-	termination(specter, cancel, errs, log)
-	log.Info("Engine run successfully finished")
+	termination(specter, cancel, errs, logger)
+	logger.Info("Engine run successfully finished")
 }
 
 // helper function that awaits specter run
@@ -200,19 +246,19 @@ func readConfig(args []string) *cliConfig {
 
 	var (
 		err            error
-		log            *zap.Logger
+		logger         *zap.Logger
 		useStdinConfig bool
 		configBuffer   []byte
 	)
 
-	log, err = zap.NewDevelopment(zap.AddCaller())
+	logger, err = zap.NewDevelopment(zap.AddCaller())
 	if err != nil {
 		panic(err)
 	}
 
-	log = log.WithOptions(zap.WrapCore(zaputil.NewStackExtractCore))
-	zap.ReplaceGlobals(log)
-	zap.RedirectStdLog(log)
+	logger = logger.WithOptions(zap.WrapCore(zaputil.NewStackExtractCore))
+	zap.ReplaceGlobals(logger)
+	zap.RedirectStdLog(logger)
 
 	v := newViper()
 
@@ -221,7 +267,7 @@ func readConfig(args []string) *cliConfig {
 		case len(args) > 1:
 			zap.L().Fatal("Too many command line arguments", zap.Strings("args", args))
 		case args[0] == stdinConfigSelector:
-			log.Info("Reading config from standard input")
+			logger.Info("Reading config from standard input")
 			useStdinConfig = true
 		default:
 			v.SetConfigFile(args[0])
@@ -232,25 +278,25 @@ func readConfig(args []string) *cliConfig {
 		v.SetConfigType("yaml")
 		configBuffer, err = io.ReadAll(bufio.NewReader(os.Stdin))
 		if err != nil {
-			log.Fatal("Cannot read from standard input", zap.Error(err))
+			logger.Fatal("Cannot read from standard input", zap.Error(err))
 		}
 		err = v.ReadConfig(strings.NewReader(string(configBuffer)))
 		if err != nil {
-			log.Fatal("Config parsing failed", zap.Error(err))
+			logger.Fatal("Config parsing failed", zap.Error(err))
 		}
 
 	} else {
 		err = v.ReadInConfig()
-		log.Info("Reading config", zap.String("file", v.ConfigFileUsed()))
+		logger.Info("Reading config", zap.String("file", v.ConfigFileUsed()))
 		if err != nil {
-			log.Fatal("Config read failed", zap.Error(err))
+			logger.Fatal("Config read failed", zap.Error(err))
 		}
 	}
 
 	cfg := defaultConfig()
 	err = config.DecodeAndValidate(v.AllSettings(), cfg)
 	if err != nil {
-		log.Fatal("Config decode failed", zap.Error(err))
+		logger.Fatal("Config decode failed", zap.Error(err))
 	}
 	return cfg
 }
@@ -338,4 +384,21 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 		}
 	}
 	return
+}
+
+func uploadReportsFiles(s3Client *helpers.Client, bucket string, fileNames ...string) error {
+	s3Ctx := context.Background()
+	for _, name := range fileNames {
+		artefactFile, err := helpers.FindFile(name)
+		if err != nil {
+			logrus.Warnf("error finding %s: %v\n", name, err)
+			continue
+		}
+
+		if err = helpers.UploadFileToS3(s3Ctx, s3Client, artefactFile, bucket); err != nil {
+			return fmt.Errorf("error uploading %s: %w", artefactFile, err)
+		}
+	}
+
+	return nil
 }
