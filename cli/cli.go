@@ -34,7 +34,7 @@ const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 const mainBucket = "wallarm-perf-pandora"
 
-var configSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring"}
+var configSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring", "./bin"}
 
 type cliConfig struct {
 	Engine     engine.Config    `config:",squash"`

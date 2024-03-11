@@ -1,7 +1,7 @@
 -include .env
 .EXPORT_ALL_VARIABLES:
 
-.PHONY: all test lint vet fmt travis coverage checkfmt prepare deps build
+.PHONY: all test lint fmt coverage checkfmt prepare deps build
 
 NO_COLOR=\033[0m
 OK_COLOR=\033[32;01m
@@ -9,20 +9,19 @@ ERROR_COLOR=\033[31;01m
 WARN_COLOR=\033[33;01m
 
 
-all: test vet checkfmt
-
-travis: test checkfmt coverage
+all: test checkfmt
 
 prepare: fmt test
 
 test:
 	@echo "$(OK_COLOR)Test packages$(NO_COLOR)"
-	@go test -v ./...
+	@go test -race -v ./...
 
 coverage:
 	@echo "$(OK_COLOR)Make coverage report$(NO_COLOR)"
 	@./script/coverage.sh
-	-goveralls -coverprofile=gover.coverprofile -service=travis-ci
+
+#failed to decode ammo with err: unexpected EOF, at position: 1047; data: "GET /?sleep=50 HTTP/1.0\nHost: wallarm."
 
 checkfmt:
 	@echo "$(OK_COLOR)Check formats$(NO_COLOR)"
@@ -48,7 +47,7 @@ deps:
 #====================  DOCKER  ====================
 
 IMAGE_NAME ?= denisqsound/specter
-PLATFORMS := linux/arm64 linux/amd64# darwin/amd64 darwin/arm64
+PLATFORMS := linux/arm64 linux/amd64#darwin/amd64 darwin/arm64
 IMAGE_FILE := pipeline#specter#
 
 define BUILD_template
