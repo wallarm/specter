@@ -6,7 +6,6 @@ set -o pipefail
 main() {
   _cd_into_top_level
   _generate_coverage_files
-  _combine_coverage_reports
 }
 
 _cd_into_top_level() {
@@ -21,9 +20,5 @@ _generate_coverage_files() {
   done
 }
 
-
-_combine_coverage_reports() {
-  gover
-}
 
 main "$@"

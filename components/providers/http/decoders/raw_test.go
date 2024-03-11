@@ -12,7 +12,7 @@ import (
 	"github.com/wallarm/specter/components/providers/http/config"
 )
 
-const rawDecoderInput = `38 good50
+const rawDecoderInput = `44 good50
 GET /?sleep=50 HTTP/1.0
 Host: wallarm.com
 
