@@ -1,51 +1,50 @@
 package monitoring
 
 import (
-	"expvar"
-	"log"
-	"strconv"
+	//"expvar"
+	//"strconv"
 
-	"go.uber.org/atomic"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-// TODO: use one rcrowley/go-metrics instead.
-
 type Counter struct {
-	i atomic.Int64
+	prometheusCounter prometheus.Counter
 }
 
-var _ expvar.Var = (*Counter)(nil)
+//var _ expvar.Var = (*Counter)(nil)
 
-func (c *Counter) String() string {
-	return strconv.FormatInt(c.i.Load(), 10)
+//func (c *Counter) String() string {
+//	return strconv.FormatInt(c.i.Load(), 10)
+//}
+
+func (c *Counter) Add(delta float64) {
+	c.prometheusCounter.Add(delta)
 }
 
-func (c *Counter) Add(delta int64) {
-	c.i.Add(delta)
-}
+//func (c *Counter) Set(value int64) {
+//	c.i.Store(value)
+//}
 
-func (c *Counter) Set(value int64) {
-	c.i.Store(value)
-}
-
-func (c *Counter) Get() int64 {
-	return c.i.Load()
+func (c *Counter) Get() float64 {
+	// В Prometheus нет прямого способа получить текущее значение Counter
+	// Вместо этого обычно используются метрики для экспорта данных
+	return 0 // заглушка
 }
 
 var counters = make(map[string]*Counter)
 
 func NewCounter(name string) *Counter {
-	if _, exists := counters[name]; exists {
-		log.Printf("Counter with name %s already exists!", name)
-		return counters[name]
-	}
-
-	v := &Counter{}
-	expvar.Publish(name, v)
-	counters[name] = v
-	return v
+	counter := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: name,
+		Help: "Counter help message",
+	})
+	prometheus.MustRegister(counter)
+	return &Counter{prometheusCounter: counter}
 }
 
 func DropCounters() {
 	counters = make(map[string]*Counter)
 }
+
+//metricsRegistry := metrics.NewRegistry()
+//prometheusClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, "whatever", "something", prometheus.DefaultRegisterer, 1*time.Second)
