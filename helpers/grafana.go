@@ -54,6 +54,7 @@ func GenerateGrafanaLink(versions []string) string {
 		logrus.Printf("Grafana link: %s", grafanaLink)
 		return grafanaLink
 	}
+
 	return fmt.Sprintf("%s/d/perftest_%s/perftest-%s?orgId=1&from=%s&to=%s",
 		grafanaBaseURL, dashboardType, dashboardType, startTime, endTime)
 }

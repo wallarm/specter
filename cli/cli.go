@@ -29,7 +29,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const VersionPandora = "0.5.8"
 const Version = "0.0.18"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
@@ -133,6 +132,7 @@ func Run() {
 				BranchName:   envy.Get("CI_COMMIT_REF_NAME", "none"),
 				DeployType:   envy.Get("DEPLOY_TYPE", "none"),
 				PipelineLink: envy.Get("CI_PIPELINE_URL", "none"),
+				Versions:     versions,
 			})
 		}
 
@@ -169,7 +169,6 @@ func Run() {
 		panic("Not implemented yet")
 		// TODO: print example config file content
 	}
-	logrus.Infof("pandora version : %s", VersionPandora)
 	logrus.Infof("specter version : %s", Version)
 
 	ReadConfigAndRunEngine()
