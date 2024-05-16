@@ -3,22 +3,71 @@ package helpers
 import (
 	"bufio"
 	"fmt"
+	"hash/adler32"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/gobuffalo/envy"
+	"github.com/sirupsen/logrus"
 )
 
-func GenerateGrafanaLink() string {
+func GenerateGrafanaLink(versions []string) string {
 	dashboardType := envy.Get("DEPLOY_TYPE", "none")
 	grafanaBaseURL := envy.Get("OVERLOAD_GRAFANA_BASE_URL", "none")
+	ciPipelineID, err := envy.MustGet("CI_PIPELINE_ID")
+	if err != nil {
+		logrus.Fatal("CI_PIPELINE_ID is not set")
+	}
 
 	startTime, endTime, err := getTimeAndPastTime()
 	if err != nil {
 		return ""
 	}
+
+	logrus.Printf("startTime: %s, endTime: %s", startTime, endTime)
+	logrus.Printf("versions: %v", versions)
+
+	var runIds []string
+	if len(versions) > 0 {
+		for _, version := range versions {
+			hash := adler32.Checksum([]byte(version))
+			deployKey := fmt.Sprintf("%08x", hash)
+			runId := deployKey + ciPipelineID
+			runIds = append(runIds, runId)
+			logrus.Printf("Appending runId: %s", runId) // Логируем каждый добавляемый runId
+		}
+	} else {
+		logrus.Print("No versions provided, runIds will be empty")
+	}
+	logrus.Printf("Final runIds: %v", runIds) // Логируем итоговый список runIds
+
+	if len(runIds) != 0 {
+		var runIDsEndpoint string
+		for _, runId := range runIds {
+			runIDsEndpoint += "&var-run_id=" + runId
+		}
+		grafanaLink := fmt.Sprintf("%s/d/perftest_%s/perftest-%s?orgId=1&from=%s&to=%s%s",
+			grafanaBaseURL, dashboardType, dashboardType, startTime, endTime, runIDsEndpoint)
+
+		logrus.Printf("Grafana link: %s", grafanaLink)
+		return grafanaLink
+	}
+	// deployKey := shared.HashStringAdler32(version)
+	//
+	// jobRunId=" + deployKey + ciPipelineID
+	// TODO генерировать ссылку на графану с необходимым количеством run_id &var-run_id=ajqf38a1230244382
+
+	// TODO добавить фильтр по run_id
+	// https://grafana.perf.wallarm.tools
+	// /d/perftest_docker/perftest-docker?orgId=1&refresh=1m&from=now-12h&to=now
+	//
+
+	// &var-datasource=P4169E866C3094E38&var-run_id=crs4b66078d244340&var-run_id=dlzf38a1230244340&var-version=All&var-namespace=All&var-pod=All&var-resolution=30s&var-created_by=All&var-node=All&var-copy_of_run_id=All
+
+	// https://grafana.perf.wallarm.tools/d/perftest_docker/perftest-docker?orgId=1&from=1715147967233&to=1715205063737&var-datasource=P4169E866C3094E38&var-run_id=ajqf38a1230244382&var-run_id=bawf38a1230244391&var-version=All&var-namespace=All&var-pod=All&var-resolution=30s&var-created_by=All&var-node=All&var-copy_of_run_id=All
+	// https://grafana.perf.wallarm.tools/d/perftest_docker/perftest-docker?orgId=1&from=1715147967233&to=1715205063737&var-run_id=ajqf38a1230244382&var-run_id=bawf38a1230244391&var-version=All&var-namespace=All&var-pod=All&var-resolution=30s&var-created_by=All&var-node=All&var-copy_of_run_id=All
 
 	return fmt.Sprintf("%s/d/perftest_%s/perftest-%s?orgId=1&from=%s&to=%s",
 		grafanaBaseURL, dashboardType, dashboardType, startTime, endTime)

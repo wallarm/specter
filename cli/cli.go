@@ -29,7 +29,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const Version = "0.0.13"
+const Version = "0.0.18"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 const mainBucket = "wallarm-perf-pandora"
@@ -118,14 +118,21 @@ func Run() {
 		if envy.Get("SPECTER_SEND_SLACK_REPORT", "false") == "true" {
 			// TODO: Get picture from Grafana
 			// TODO: Upload image to S3
-			URL := envy.Get("SPECTER_SLACK_WEBHOOK", "none")
-			helpers.SendReport(URL, helpers.Message{
+
+			stressVersions, err := envy.MustGet("OVERLOAD_STRESS_VERSIONS")
+			if err != nil {
+				logrus.Fatalf("Error getting OVERLOAD_STRESS_VERSIONS: %s", err)
+			}
+
+			versions := strings.Split(stressVersions, ";")
+			helpers.SendReport(envy.Get("SPECTER_SLACK_WEBHOOK", "none"), helpers.Message{
 				Username:     envy.Get("GITLAB_USER_LOGIN", "none"),
-				ImageURL:     "",
-				GrafanaURL:   helpers.GenerateGrafanaLink(),
+				ImageURL:     "", // TODO
+				GrafanaURL:   helpers.GenerateGrafanaLink(versions),
 				BranchName:   envy.Get("CI_COMMIT_REF_NAME", "none"),
 				DeployType:   envy.Get("DEPLOY_TYPE", "none"),
 				PipelineLink: envy.Get("CI_PIPELINE_URL", "none"),
+				Versions:     versions,
 			})
 		}
 
