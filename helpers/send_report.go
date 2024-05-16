@@ -16,6 +16,7 @@ type Message struct {
 	DeployType   string
 	BranchName   string
 	PipelineLink string
+	Versions     []string
 }
 
 func SendReport(targetURL string, message Message) {
@@ -62,7 +63,9 @@ func getTemplate() (*template.Template, error) {
 	baseText := `{
         "blocks": [
             {"type": "section", "text": {"type": "mrkdwn", "text": "Hello, <@{{.Username}}>! Here is{{if ne .DeployType "none"}} the {{.DeployType}}{{end}} performance update:"}},
+            {{if ne .DeployType "none"}}
             {"type": "section", "text": {"type": "mrkdwn", "text": "Check out the detailed performance metrics on Grafana: <{{.GrafanaURL}}|Grafana Dashboard>"}},
+            {{end}}
             {"type": "section", "text": {"type": "mrkdwn", "text": " <{{.PipelineLink}}|Pipeline> triggered on branch: *{{.BranchName}}*"}}
         ]
     }`
