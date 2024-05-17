@@ -133,7 +133,6 @@ func Run() {
 				BranchName:   envy.Get("CI_COMMIT_REF_NAME", "none"),
 				DeployType:   envy.Get("DEPLOY_TYPE", "none"),
 				PipelineLink: envy.Get("CI_PIPELINE_URL", "none"),
-				Versions:     versions,
 			})
 		}
 

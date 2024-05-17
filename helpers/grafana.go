@@ -36,12 +36,12 @@ func GenerateGrafanaLink(versions []string) string {
 			deployKey := fmt.Sprintf("%08x", hash)
 			runId := deployKey + ciPipelineID
 			runIds = append(runIds, runId)
-			logrus.Printf("Appending runId: %s", runId) // Логируем каждый добавляемый runId
+			logrus.Printf("Appending runId: %s", runId)
 		}
 	} else {
 		logrus.Print("No versions provided, runIds will be empty")
 	}
-	logrus.Printf("Final runIds: %v", runIds) // Логируем итоговый список runIds
+	logrus.Printf("Final runIds: %v", runIds)
 
 	if len(runIds) != 0 {
 		var runIDsEndpoint string
