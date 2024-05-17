@@ -5,8 +5,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/wallarm/specter/helpers"
 	"io"
 	"log"
 	"net/http"
@@ -19,22 +17,25 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gobuffalo/envy"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-
 	"github.com/wallarm/specter/core/config"
 	"github.com/wallarm/specter/core/engine"
+	"github.com/wallarm/specter/helpers"
 	"github.com/wallarm/specter/lib/zaputil"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-const Version = "0.0.6"
+const VersionPandora = "0.5.8"
+const Version = "0.0.18"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
 const mainBucket = "wallarm-perf-pandora"
 
-var configSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring", "./bin"}
+var ConfigSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring", "./bin"}
 
 type cliConfig struct {
 	Engine     engine.Config    `config:",squash"`
@@ -99,11 +100,10 @@ func Run() {
 		flag.PrintDefaults()
 	}
 
-	var example, version, download, upload, update, artefacts bool
+	var example, download, upload, update, artefacts bool
 	var updateTarget string
 
 	flag.BoolVar(&example, "example", false, "print example config to STDOUT and exit")
-	flag.BoolVar(&version, "version", false, "print specter core version")
 	flag.BoolVar(&upload, "upload", false, "upload to s3 ammo and config for specter")
 	flag.BoolVar(&artefacts, "artefacts", false, "upload to s3 artefacts for specter")
 	flag.BoolVar(&download, "download", false, "download from s3 ammo and config for specter")
@@ -115,8 +115,27 @@ func Run() {
 
 	if artefacts {
 		s3Client := helpers.Initialize()
-
 		fileNames := []string{"http_phout.log", "phout.log", "answ.log", "load.yaml", "ammo.json"}
+		if envy.Get("SPECTER_SEND_SLACK_REPORT", "false") == "true" {
+			// TODO: Get picture from Grafana
+			// TODO: Upload image to S3
+
+			stressVersions, err := envy.MustGet("OVERLOAD_STRESS_VERSIONS")
+			if err != nil {
+				logrus.Fatalf("Error getting OVERLOAD_STRESS_VERSIONS: %s", err)
+			}
+
+			versions := strings.Split(stressVersions, ";")
+			helpers.SendReport(envy.Get("SPECTER_SLACK_WEBHOOK", "none"), helpers.Message{
+				Username:     envy.Get("GITLAB_USER_LOGIN", "none"),
+				ImageURL:     "", // TODO
+				GrafanaURL:   helpers.GenerateGrafanaLink(versions),
+				BranchName:   envy.Get("CI_COMMIT_REF_NAME", "none"),
+				DeployType:   envy.Get("DEPLOY_TYPE", "none"),
+				PipelineLink: envy.Get("CI_PIPELINE_URL", "none"),
+			})
+		}
+
 		if err := uploadReportsFiles(s3Client, mainBucket, fileNames...); err != nil {
 			logrus.Fatalf("%v", err)
 		}
@@ -150,11 +169,8 @@ func Run() {
 		panic("Not implemented yet")
 		// TODO: print example config file content
 	}
-
-	if version {
-		logrus.Infof("Specter core/%s", Version)
-		return
-	}
+	logrus.Infof("pandora version : %s", VersionPandora)
+	logrus.Infof("specter version : %s", Version)
 
 	ReadConfigAndRunEngine()
 }
@@ -304,7 +320,7 @@ func readConfig(args []string) *cliConfig {
 func newViper() *viper.Viper {
 	v := viper.New()
 	v.SetConfigName(defaultConfigFile)
-	for _, dir := range configSearchDirs {
+	for _, dir := range ConfigSearchDirs {
 		v.AddConfigPath(dir)
 	}
 	return v
