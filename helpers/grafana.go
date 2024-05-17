@@ -54,21 +54,6 @@ func GenerateGrafanaLink(versions []string) string {
 		logrus.Printf("Grafana link: %s", grafanaLink)
 		return grafanaLink
 	}
-	// deployKey := shared.HashStringAdler32(version)
-	//
-	// jobRunId=" + deployKey + ciPipelineID
-	// TODO генерировать ссылку на графану с необходимым количеством run_id &var-run_id=ajqf38a1230244382
-
-	// TODO добавить фильтр по run_id
-	// https://grafana.perf.wallarm.tools
-	// /d/perftest_docker/perftest-docker?orgId=1&refresh=1m&from=now-12h&to=now
-	//
-
-	// &var-datasource=P4169E866C3094E38&var-run_id=crs4b66078d244340&var-run_id=dlzf38a1230244340&var-version=All&var-namespace=All&var-pod=All&var-resolution=30s&var-created_by=All&var-node=All&var-copy_of_run_id=All
-
-	// https://grafana.perf.wallarm.tools/d/perftest_docker/perftest-docker?orgId=1&from=1715147967233&to=1715205063737&var-datasource=P4169E866C3094E38&var-run_id=ajqf38a1230244382&var-run_id=bawf38a1230244391&var-version=All&var-namespace=All&var-pod=All&var-resolution=30s&var-created_by=All&var-node=All&var-copy_of_run_id=All
-	// https://grafana.perf.wallarm.tools/d/perftest_docker/perftest-docker?orgId=1&from=1715147967233&to=1715205063737&var-run_id=ajqf38a1230244382&var-run_id=bawf38a1230244391&var-version=All&var-namespace=All&var-pod=All&var-resolution=30s&var-created_by=All&var-node=All&var-copy_of_run_id=All
-
 	return fmt.Sprintf("%s/d/perftest_%s/perftest-%s?orgId=1&from=%s&to=%s",
 		grafanaBaseURL, dashboardType, dashboardType, startTime, endTime)
 }
