@@ -20,9 +20,17 @@ type Message struct {
 }
 
 func SendReport(targetURL string, message Message) {
+
+	var (
+		err  error
+		tmpl *template.Template
+		req  *http.Request
+		resp *http.Response
+	)
+	logrus.Print("Start sending report to Slack")
 	logrus.Printf("Deploy Type: %s", message.DeployType)
 
-	tmpl, err := getTemplate() // Get the template based on the deployment type
+	tmpl, err = getTemplate() // Get the template based on the deployment type
 	if err != nil {
 		logrus.Fatalf("Error occurred while getting template: %s", err)
 	}
@@ -32,9 +40,9 @@ func SendReport(targetURL string, message Message) {
 		logrus.Fatalf("Error occurred while executing template: %s", err)
 	}
 
-	logrus.Printf("Template: %s", tpl.String())
+	logrus.Printf("Message for Slack: %s", tpl.String())
 
-	req, err := http.NewRequest(http.MethodPost, targetURL, bytes.NewBuffer(tpl.Bytes()))
+	req, err = http.NewRequest(http.MethodPost, targetURL, bytes.NewBuffer(tpl.Bytes()))
 	if err != nil {
 		log.Fatalf("Error occurred while creating HTTP request: %s", err)
 	}
@@ -42,7 +50,7 @@ func SendReport(targetURL string, message Message) {
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		log.Fatalf("Error occurred while sending HTTP request: %s", err)
 	}

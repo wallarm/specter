@@ -30,10 +30,10 @@ import (
 )
 
 const VersionPandora = "0.5.8"
-const Version = "0.0.18"
+const Version = "0.1.0"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
-const mainBucket = "wallarm-perf-pandora"
+const mainBucket = "wallarm-perf-specter"
 
 var ConfigSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring", "./bin"}
 
@@ -133,6 +133,7 @@ func Run() {
 				BranchName:   envy.Get("CI_COMMIT_REF_NAME", "none"),
 				DeployType:   envy.Get("DEPLOY_TYPE", "none"),
 				PipelineLink: envy.Get("CI_PIPELINE_URL", "none"),
+				Versions:     versions,
 			})
 		}
 
