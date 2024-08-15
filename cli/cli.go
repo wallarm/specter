@@ -30,10 +30,10 @@ import (
 )
 
 const VersionPandora = "0.5.8"
-const Version = "0.0.18"
+const Version = "0.1.0"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
-const mainBucket = "wallarm-perf-pandora"
+const mainBucket = "wallarm-perf-specter"
 
 var ConfigSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring", "./bin"}
 
