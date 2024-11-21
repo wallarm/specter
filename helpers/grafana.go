@@ -21,7 +21,7 @@ func GenerateGrafanaLink(versions []string) string {
 		logrus.Fatal("CI_PIPELINE_ID is not set")
 	}
 
-	startTime, endTime, err := getTimeAndPastTime()
+	endTime, startTime, err := getTimeAndPastTime()
 	if err != nil {
 		return ""
 	}
@@ -50,7 +50,6 @@ func GenerateGrafanaLink(versions []string) string {
 		}
 		grafanaLink := fmt.Sprintf("%s/d/perftest_%s/perftest-%s?orgId=1&from=%s&to=%s%s",
 			grafanaBaseURL, dashboardType, dashboardType, startTime, endTime, runIDsEndpoint)
-
 		logrus.Printf("Grafana link: %s", grafanaLink)
 		return grafanaLink
 	}
