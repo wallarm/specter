@@ -125,6 +125,7 @@ func Initialize() *Client {
 	config, err = GetConf()
 	if err != nil {
 		logrus.Warn("Error parsing config: %s", err)
+		return nil
 	}
 
 	objectStorageClient, err = NewClient(
