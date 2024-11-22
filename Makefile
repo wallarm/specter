@@ -48,7 +48,8 @@ deps:
 
 IMAGE_NAME ?= denisqsound/specter
 PLATFORMS := linux/arm64 linux/amd64#darwin/amd64 darwin/arm64
-IMAGE_FILE := pipeline#specter#
+#IMAGE_FILE := pipeline#specter#
+IMAGE_FILE := specter-k6
 
 define BUILD_template
 build-$(1):

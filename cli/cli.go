@@ -114,8 +114,8 @@ func Run() {
 	flag.Parse()
 
 	if artefacts {
-		s3Client := helpers.Initialize()
-		fileNames := []string{"http_phout.log", "phout.log", "answ.log", "load.yaml", "ammo.json"}
+		//s3Client := helpers.Initialize()
+		//fileNames := []string{"http_phout.log", "phout.log", "answ.log", "load.yaml", "ammo.json"}
 		if envy.Get("SPECTER_SEND_SLACK_REPORT", "false") == "true" {
 			// TODO: Get picture from Grafana
 			// TODO: Upload image to S3
@@ -137,9 +137,9 @@ func Run() {
 			})
 		}
 
-		if err := uploadReportsFiles(s3Client, mainBucket, fileNames...); err != nil {
-			logrus.Fatalf("%v", err)
-		}
+		//if err := uploadReportsFiles(s3Client, mainBucket, fileNames...); err != nil {
+		//	logrus.Fatalf("%v", err)
+		//}
 
 		return
 	}

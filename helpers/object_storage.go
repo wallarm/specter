@@ -51,7 +51,7 @@ func GetConf() (*MinioConfig, error) {
 
 	// Check that all necessary configurations are set
 	if endpoint == "" || accessKey == "" || secretKey == "" {
-		return nil, fmt.Errorf("not all necessary environment variables are set")
+		return nil, fmt.Errorf("not all S3 necessary environment variables are set")
 	}
 
 	conf := MinioConfig{
@@ -124,13 +124,14 @@ func Initialize() *Client {
 
 	config, err = GetConf()
 	if err != nil {
-		logrus.Fatalf("Error parsing config: %s", err)
+		logrus.Warn("Error parsing config: %s", err)
+		return nil
 	}
 
 	objectStorageClient, err = NewClient(
 		config.Endpoint, config.AccessKey, config.SecretKey, config.UseSSL)
 	if err != nil {
-		logrus.Fatalf("Error creating S3 client: %s", err)
+		logrus.Warn("Error creating S3 client: %s", err)
 	}
 
 	return objectStorageClient
