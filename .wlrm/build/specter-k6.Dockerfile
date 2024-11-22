@@ -3,10 +3,9 @@ ARG OS
 ARG ARCH
 COPY bin/specter-${OS}-${ARCH} /specter
 
+
 FROM grafana/k6:latest
-
 WORKDIR /home/k6
-
 ARG OS
 ARG ARCH
 
