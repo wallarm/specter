@@ -33,7 +33,8 @@ const VersionPandora = "0.5.8"
 const Version = "0.1.0"
 const defaultConfigFile = "load"
 const stdinConfigSelector = "-"
-const mainBucket = "wallarm-perf-specter"
+
+//const mainBucket = "wallarm-perf-specter"
 
 var ConfigSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring", "./bin"}
 
@@ -145,12 +146,12 @@ func Run() {
 	}
 
 	if upload {
-		s3Client := helpers.Initialize()
-
-		fileNames := []string{"load.yaml", "ammo.json"}
-		if err := uploadReportsFiles(s3Client, mainBucket, fileNames...); err != nil {
-			logrus.Fatalf("%v", err)
-		}
+		//s3Client := helpers.Initialize()
+		//
+		//fileNames := []string{"load.yaml", "ammo.json"}
+		//if err := uploadReportsFiles(s3Client, mainBucket, fileNames...); err != nil {
+		//	logrus.Fatalf("%v", err)
+		//}
 
 		return
 	}
@@ -403,19 +404,19 @@ func startMonitoring(conf monitoringConfig) (stop func()) {
 	return
 }
 
-func uploadReportsFiles(s3Client *helpers.Client, bucket string, fileNames ...string) error {
-	s3Ctx := context.Background()
-	for _, name := range fileNames {
-		artefactFile, err := helpers.FindFile(name)
-		if err != nil {
-			logrus.Warnf("error finding %s: %v\n", name, err)
-			continue
-		}
-
-		if err = helpers.UploadFileToS3(s3Ctx, s3Client, artefactFile, bucket); err != nil {
-			return fmt.Errorf("error uploading %s: %w", artefactFile, err)
-		}
-	}
-
-	return nil
-}
+//func uploadReportsFiles(s3Client *helpers.Client, bucket string, fileNames ...string) error {
+//	s3Ctx := context.Background()
+//	for _, name := range fileNames {
+//		artefactFile, err := helpers.FindFile(name)
+//		if err != nil {
+//			logrus.Warnf("error finding %s: %v\n", name, err)
+//			continue
+//		}
+//
+//		if err = helpers.UploadFileToS3(s3Ctx, s3Client, artefactFile, bucket); err != nil {
+//			return fmt.Errorf("error uploading %s: %w", artefactFile, err)
+//		}
+//	}
+//
+//	return nil
+//}
