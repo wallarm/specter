@@ -22,6 +22,7 @@ func GenerateGrafanaLink(versions []string) string {
 
 	endTime, startTime, err := getTimeAndPastTime()
 	if err != nil {
+		logrus.Errorf("Error getting time and past time: %s", err)
 		return ""
 	}
 
