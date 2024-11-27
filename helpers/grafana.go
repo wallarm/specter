@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/adler32"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -131,48 +132,73 @@ func getTimeAndPastTime() (string, string, error) {
 //	return "", fmt.Errorf("load.yaml not found in the search directories or does not contain 'duration'")
 //}
 
-// findDurationInScriptJS searches for the /scripts/script.js file and extracts the duration value.
-// It returns the duration as a string after validating its format (supports h, m, s).
+// findDurationInScriptJS searches for the script.js file in specified directories and extracts the duration value as a string.
+// It handles cases where the duration line includes trailing comments or commas.
 func findDurationInScriptJS() (string, error) {
-	// Define the path to the script.js file
-	path := "/scripts/test.js"
+	// Define the directories to search for script.js
+	ConfigSearchDirs := []string{"/scripts", "./scripts", "./../scripts"}
 
-	// Attempt to open the script.js file
-	file, err := os.Open(path)
-	if err != nil {
-		return "", fmt.Errorf("error opening file at %s: %v", path, err)
-	}
-	defer file.Close()
+	for _, dir := range ConfigSearchDirs {
+		// Construct the full path to script.js
+		path := filepath.Join(dir, "script.js")
 
-	// Create a scanner to read the file line by line
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Look for the line containing "duration"
-		if strings.Contains(line, "duration:") {
-			// Split the line by colon to separate the key and value
-			parts := strings.Split(line, ":")
-			if len(parts) > 1 {
-				// Extract the value part, trim spaces and remove quotes and commas
-				value := strings.TrimSpace(parts[1])
-				value = strings.Trim(value, `"',`)
-
-				// Validate the duration format using time.ParseDuration
-				if _, err := time.ParseDuration(value); err != nil {
-					return "", fmt.Errorf("invalid duration format '%s' in file %s: %v", value, path, err)
-				}
-
-				// Return the validated duration string
-				return value, nil
+		// Attempt to open the script.js file
+		file, err := os.Open(path)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				// Return any error other than "file not found"
+				return "", fmt.Errorf("error opening file at %s: %v", path, err)
 			}
+			// Continue to the next directory if file is not found
+			continue
+		}
+		defer file.Close()
+
+		// Create a scanner to read the file line by line
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+
+			// Look for the line containing "duration"
+			if strings.Contains(line, "duration:") {
+				// Split the line by colon to separate the key and value
+				parts := strings.SplitN(line, ":", 2)
+				if len(parts) > 1 {
+					// Extract the value part and trim spaces
+					value := strings.TrimSpace(parts[1])
+
+					// Remove any trailing comments or commas
+					// Find the index of comma or comment
+					commaIndex := strings.Index(value, ",")
+					commentIndex := strings.Index(value, "//")
+
+					// Determine the earliest index among comma and comment
+					endIndex := len(value)
+					if commaIndex != -1 && commaIndex < endIndex {
+						endIndex = commaIndex
+					}
+					if commentIndex != -1 && commentIndex < endIndex {
+						endIndex = commentIndex
+					}
+
+					// Slice the string up to the determined end index
+					cleanValue := strings.TrimSpace(value[:endIndex])
+
+					// Remove surrounding quotes if present
+					cleanValue = strings.Trim(cleanValue, `"'`)
+
+					// Return the cleaned duration string
+					return cleanValue, nil
+				}
+			}
+		}
+
+		// Check for any errors encountered during scanning
+		if err := scanner.Err(); err != nil {
+			return "", fmt.Errorf("error reading file at %s: %v", path, err)
 		}
 	}
 
-	// Check for any errors encountered during scanning
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error reading file at %s: %v", path, err)
-	}
-
-	return "", fmt.Errorf("duration not found in file %s", path)
+	// Return an error if script.js is not found or duration is not present
+	return "", fmt.Errorf("script.js not found in the search directories or does not contain 'duration'")
 }
