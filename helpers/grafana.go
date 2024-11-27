@@ -6,6 +6,7 @@ import (
 	"hash/adler32"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -132,11 +133,16 @@ func getTimeAndPastTime() (string, string, error) {
 //	return "", fmt.Errorf("load.yaml not found in the search directories or does not contain 'duration'")
 //}
 
-// findDurationInScriptJS searches for the script.js file in specified directories and extracts the duration value as a string.
+// findDurationInScriptJS searches specified directories for script.js and extracts the duration value as a string.
 // It handles cases where the duration line includes trailing comments or commas.
 func findDurationInScriptJS() (string, error) {
 	// Define the directories to search for script.js
 	ConfigSearchDirs := []string{"/scripts", "./scripts", "./../scripts"}
+
+	// Define a regex pattern to match the duration line
+	// This pattern captures the value inside quotes after "duration:"
+	// It supports both single and double quotes and ignores trailing commas and comments
+	durationRegex := regexp.MustCompile(`(?i)duration\s*:\s*['"]([^'"]+)['"]`)
 
 	for _, dir := range ConfigSearchDirs {
 		// Construct the full path to script.js
@@ -159,37 +165,12 @@ func findDurationInScriptJS() (string, error) {
 		for scanner.Scan() {
 			line := scanner.Text()
 
-			// Look for the line containing "duration"
-			if strings.Contains(line, "duration:") {
-				// Split the line by colon to separate the key and value
-				parts := strings.SplitN(line, ":", 2)
-				if len(parts) > 1 {
-					// Extract the value part and trim spaces
-					value := strings.TrimSpace(parts[1])
-
-					// Remove any trailing comments or commas
-					// Find the index of comma or comment
-					commaIndex := strings.Index(value, ",")
-					commentIndex := strings.Index(value, "//")
-
-					// Determine the earliest index among comma and comment
-					endIndex := len(value)
-					if commaIndex != -1 && commaIndex < endIndex {
-						endIndex = commaIndex
-					}
-					if commentIndex != -1 && commentIndex < endIndex {
-						endIndex = commentIndex
-					}
-
-					// Slice the string up to the determined end index
-					cleanValue := strings.TrimSpace(value[:endIndex])
-
-					// Remove surrounding quotes if present
-					cleanValue = strings.Trim(cleanValue, `"'`)
-
-					// Return the cleaned duration string
-					return cleanValue, nil
-				}
+			// Use regex to find and extract the duration value
+			matches := durationRegex.FindStringSubmatch(line)
+			if len(matches) == 2 {
+				// matches[1] contains the captured duration value
+				cleanValue := strings.TrimSpace(matches[1])
+				return cleanValue, nil
 			}
 		}
 
