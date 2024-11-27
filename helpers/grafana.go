@@ -6,6 +6,7 @@ import (
 	"hash/adler32"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,15 +15,24 @@ import (
 )
 
 func GenerateGrafanaLink(versions []string) string {
+
+	var (
+		err          error
+		ciPipelineID string
+		endTime      string
+		startTime    string
+	)
+
 	dashboardType := envy.Get("DEPLOY_TYPE", "none")
 	grafanaBaseURL := envy.Get("OVERLOAD_GRAFANA_BASE_URL", "none")
-	ciPipelineID, err := envy.MustGet("CI_PIPELINE_ID")
+	ciPipelineID, err = envy.MustGet("CI_PIPELINE_ID")
 	if err != nil {
 		logrus.Fatal("CI_PIPELINE_ID is not set")
 	}
 
-	endTime, startTime, err := getTimeAndPastTime()
+	endTime, startTime, err = getTimeAndPastTime()
 	if err != nil {
+		logrus.Errorf("Error getting time and past time: %s", err)
 		return ""
 	}
 
@@ -59,7 +69,7 @@ func GenerateGrafanaLink(versions []string) string {
 
 func getTimeAndPastTime() (string, string, error) {
 	// Parse the duration string
-	durationStrFromYAML, err := findDurationInYAML()
+	durationStrFromYAML, err := findDurationInScriptJS()
 	if err != nil {
 		return "", "", err
 	}
@@ -79,18 +89,70 @@ func getTimeAndPastTime() (string, string, error) {
 	return fmt.Sprintf("%d", currentMillis), fmt.Sprintf("%d", pastMillis), nil
 }
 
-// findDurationInYAML searches the specified directories for a file named load.yaml and extracts the duration value.
-func findDurationInYAML() (string, error) {
-	var ConfigSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring", "./bin"}
-	for _, dir := range ConfigSearchDirs {
-		// Construct the path to the load.yaml file
-		path := filepath.Join(dir, "load.yaml")
+//// findDurationInYAML searches the specified directories for a file named load.yaml and extracts the duration value.
+//func findDurationInYAML() (string, error) {
+//	var ConfigSearchDirs = []string{"./", "./config", "/etc/specter", "./../suite/mirroring", "./bin"}
+//	for _, dir := range ConfigSearchDirs {
+//		// Construct the path to the load.yaml file
+//		path := filepath.Join(dir, "load.yaml")
+//
+//		// Attempt to open the file
+//		file, err := os.Open(path)
+//		if err != nil {
+//			if !os.IsNotExist(err) {
+//				// Report any error other than "file not found"
+//				return "", fmt.Errorf("error opening file at %s: %v", path, err)
+//			}
+//			// Continue to the next directory if file is not found
+//			continue
+//		}
+//		defer file.Close()
+//
+//		// Create a scanner to read the file line by line
+//		scanner := bufio.NewScanner(file)
+//		for scanner.Scan() {
+//			line := scanner.Text()
+//
+//			// Check if the line contains the keyword "duration"
+//			if strings.Contains(line, "duration:") {
+//				// Extract the value after the keyword, trim spaces
+//				parts := strings.Split(line, ":")
+//				if len(parts) > 1 {
+//					value := strings.TrimSpace(parts[1])
+//					return value, nil
+//				}
+//			}
+//		}
+//
+//		// Check for errors encountered during scanning
+//		if err = scanner.Err(); err != nil {
+//			return "", fmt.Errorf("error reading file at %s: %v", path, err)
+//		}
+//	}
+//
+//	return "", fmt.Errorf("load.yaml not found in the search directories or does not contain 'duration'")
+//}
 
-		// Attempt to open the file
+// findDurationInScriptJS searches specified directories for script.js and extracts the duration value as a string.
+// It handles cases where the duration line includes trailing comments or commas.
+func findDurationInScriptJS() (string, error) {
+	// Define the directories to search for script.js
+	ConfigSearchDirs := []string{"/scripts", "./scripts", "./../scripts"}
+
+	// Define a regex pattern to match the duration line
+	// This pattern captures the value inside quotes after "duration:"
+	// It supports both single and double quotes and ignores trailing commas and comments
+	durationRegex := regexp.MustCompile(`(?i)duration\s*:\s*['"]([^'"]+)['"]`)
+
+	for _, dir := range ConfigSearchDirs {
+		// Construct the full path to script.js
+		path := filepath.Join(dir, "script.js")
+
+		// Attempt to open the script.js file
 		file, err := os.Open(path)
 		if err != nil {
 			if !os.IsNotExist(err) {
-				// Report any error other than "file not found"
+				// Return any error other than "file not found"
 				return "", fmt.Errorf("error opening file at %s: %v", path, err)
 			}
 			// Continue to the next directory if file is not found
@@ -103,22 +165,21 @@ func findDurationInYAML() (string, error) {
 		for scanner.Scan() {
 			line := scanner.Text()
 
-			// Check if the line contains the keyword "duration"
-			if strings.Contains(line, "duration:") {
-				// Extract the value after the keyword, trim spaces
-				parts := strings.Split(line, ":")
-				if len(parts) > 1 {
-					value := strings.TrimSpace(parts[1])
-					return value, nil
-				}
+			// Use regex to find and extract the duration value
+			matches := durationRegex.FindStringSubmatch(line)
+			if len(matches) == 2 {
+				// matches[1] contains the captured duration value
+				cleanValue := strings.TrimSpace(matches[1])
+				return cleanValue, nil
 			}
 		}
 
-		// Check for errors encountered during scanning
-		if err = scanner.Err(); err != nil {
+		// Check for any errors encountered during scanning
+		if err := scanner.Err(); err != nil {
 			return "", fmt.Errorf("error reading file at %s: %v", path, err)
 		}
 	}
 
-	return "", fmt.Errorf("load.yaml not found in the search directories or does not contain 'duration'")
+	// Return an error if script.js is not found or duration is not present
+	return "", fmt.Errorf("script.js not found in the search directories or does not contain 'duration'")
 }

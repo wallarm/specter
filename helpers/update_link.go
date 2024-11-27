@@ -26,7 +26,7 @@ func findFile(fileName string) (string, error) {
 }
 
 func UpdateFiles(updateTarget string) error {
-	loadYamlPath, err := findFile("load.yaml")
+	loadYamlPath, err := findFile("script.js")
 	if err != nil {
 		return err
 	}
