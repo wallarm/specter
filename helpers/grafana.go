@@ -13,14 +13,22 @@ import (
 )
 
 func GenerateGrafanaLink(versions []string) string {
+
+	var (
+		err          error
+		ciPipelineID string
+		endTime      string
+		startTime    string
+	)
+
 	dashboardType := envy.Get("DEPLOY_TYPE", "none")
 	grafanaBaseURL := envy.Get("OVERLOAD_GRAFANA_BASE_URL", "none")
-	ciPipelineID, err := envy.MustGet("CI_PIPELINE_ID")
+	ciPipelineID, err = envy.MustGet("CI_PIPELINE_ID")
 	if err != nil {
 		logrus.Fatal("CI_PIPELINE_ID is not set")
 	}
 
-	endTime, startTime, err := getTimeAndPastTime()
+	endTime, startTime, err = getTimeAndPastTime()
 	if err != nil {
 		logrus.Errorf("Error getting time and past time: %s", err)
 		return ""
@@ -127,7 +135,7 @@ func getTimeAndPastTime() (string, string, error) {
 // It returns the duration as a string after validating its format (supports h, m, s).
 func findDurationInScriptJS() (string, error) {
 	// Define the path to the script.js file
-	path := "/scripts/script.js"
+	path := "/scripts/test.js"
 
 	// Attempt to open the script.js file
 	file, err := os.Open(path)
