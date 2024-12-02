@@ -6,7 +6,6 @@ import (
 	"hash/adler32"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -133,53 +132,51 @@ func getTimeAndPastTime() (string, string, error) {
 //	return "", fmt.Errorf("load.yaml not found in the search directories or does not contain 'duration'")
 //}
 
-// findDurationInScriptJS searches specified directories for script.js and extracts the duration value as a string.
-// It handles cases where the duration line includes trailing comments or commas.
 func findDurationInScriptJS() (string, error) {
-	// Define the directories to search for script.js
+	duration := os.Getenv("K6_DURATION")
+	if duration != "" {
+		return duration, nil
+	}
+
 	ConfigSearchDirs := []string{"/scripts", "./scripts", "./../scripts"}
 
-	// Define a regex pattern to match the duration line
-	// This pattern captures the value inside quotes after "duration:"
-	// It supports both single and double quotes and ignores trailing commas and comments
-	durationRegex := regexp.MustCompile(`(?i)duration\s*:\s*['"]([^'"]+)['"]`)
-
 	for _, dir := range ConfigSearchDirs {
-		// Construct the full path to script.js
-		path := filepath.Join(dir, "script.js")
-
-		// Attempt to open the script.js file
+		path := filepath.Join(dir, "test.js")
 		file, err := os.Open(path)
 		if err != nil {
 			if !os.IsNotExist(err) {
-				// Return any error other than "file not found"
 				return "", fmt.Errorf("error opening file at %s: %v", path, err)
 			}
-			// Continue to the next directory if file is not found
 			continue
 		}
 		defer file.Close()
 
-		// Create a scanner to read the file line by line
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			line := scanner.Text()
 
-			// Use regex to find and extract the duration value
-			matches := durationRegex.FindStringSubmatch(line)
-			if len(matches) == 2 {
-				// matches[1] contains the captured duration value
-				cleanValue := strings.TrimSpace(matches[1])
-				return cleanValue, nil
+			if strings.Contains(line, "duration:") {
+				lineWithoutComments := strings.SplitN(line, "//", 2)[0]
+				lineWithoutComments = strings.ReplaceAll(lineWithoutComments, ",", "")
+				parts := strings.SplitN(lineWithoutComments, ":", 2)
+				if len(parts) < 2 {
+					continue
+				}
+
+				value := strings.TrimSpace(parts[1])
+				value = strings.Trim(value, `"'`)
+
+				if value == "" {
+					return "", fmt.Errorf("empty duration value in file %s", path)
+				}
+
+				return value, nil
 			}
 		}
 
-		// Check for any errors encountered during scanning
 		if err := scanner.Err(); err != nil {
 			return "", fmt.Errorf("error reading file at %s: %v", path, err)
 		}
 	}
-
-	// Return an error if script.js is not found or duration is not present
-	return "", fmt.Errorf("script.js not found in the search directories or does not contain 'duration'")
+	return "", fmt.Errorf("test.js not found in the search directories or does not contain 'duration'")
 }
