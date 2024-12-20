@@ -23,6 +23,10 @@ func GenerateGrafanaLink(versions []string) string {
 	)
 
 	dashboardType := envy.Get("DEPLOY_TYPE", "none")
+	if dashboardType == "nginx-node-docker" {
+		dashboardType = "docker"
+	}
+
 	grafanaBaseURL := envy.Get("OVERLOAD_GRAFANA_BASE_URL", "none")
 	ciPipelineID, err = envy.MustGet("CI_PIPELINE_ID")
 	if err != nil {
@@ -57,7 +61,8 @@ func GenerateGrafanaLink(versions []string) string {
 		for _, runId := range runIds {
 			runIDsEndpoint += "&var-run_id=" + runId
 		}
-		grafanaLink := fmt.Sprintf("%s/d/perftest_%s/perftest-%s?orgId=1&from=%s&to=%s%s",
+		grafanaLink := fmt.Sprintf("%s/d/perftest_%s+"+
+			"/perftest-%s?orgId=1&from=%s&to=%s%s",
 			grafanaBaseURL, dashboardType, dashboardType, startTime, endTime, runIDsEndpoint)
 		logrus.Printf("Grafana link: %s", grafanaLink)
 		return grafanaLink
